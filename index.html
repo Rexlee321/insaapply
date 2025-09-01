@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>인사 내신서</title>
   <style>
     body { font-family: "맑은 고딕", sans-serif; margin: 20px; }
@@ -9,87 +9,64 @@
     th, td { border: 1px solid #000; padding: 12px; text-align: center; font-size: 16px; }
     th { background-color: #f9f9f9; }
     input[type="text"], input[type="tel"] { width: 95%; padding: 5px; border: none; text-align: center; font-size: 15px; }
-    .submit-btn { display: inline-flex; align-items: center; gap: 8px; margin: 20px auto; padding: 12px 24px; background-color: #4CAF50; color: #fff; border: none; cursor: pointer; font-size: 18px; border-radius: 5px; }
-    .submit-btn[disabled] { opacity: 0.6; cursor: not-allowed; }
-    .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.5); border-top-color: #fff; border-radius: 50%; display: none; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .note { font-size: 20px; line-height: 1.6; }
-    .note span { font-size: 20px; }
-    .title-cell { text-align:center; font-weight:bold; font-size:26px; }
-    .criteria-title { font-size: 26px; font-weight: bold; }
-    .criteria-detail { font-size: 12px; font-weight: normal; }
-    .helper { color:#444; font-size:13px; margin-top:6px; text-align:right; }
-    .error { color:#c62828; font-size:14px; text-align:left; margin: 6px 0 0 4px; }
+    .submit-btn { display: block; margin: 20px auto; padding: 12px 24px; background-color: #4CAF50; color: #fff; border: none; cursor: pointer; font-size: 18px; border-radius: 5px; }
+    .error { color: red; font-size: 14px; margin-bottom: 10px; display: none; }
   </style>
-  <!-- SheetJS (XLSX) CDN for Excel export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-    // ===== 설정 =====
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbx2bSc0FcKQjIIoUkODcgmm85Qi4LtmPMtoKxT5Pv3gJtgAice-0QKPqJf89XTgr-Vg/exec"; // 본인 웹앱 URL로 교체 가능
-    const SECRET = "CHANGE_ME_SECRET"; // 스팸 방지용. Apps Script에서도 같은 값 검사 권장
+    const GAS_URL = "https://script.google.com/macros/s/당신의_웹앱_ID/exec"; // <- 본인 웹앱 주소로 바꾸세요
+    const SECRET = "CHANGE_ME_SECRET"; // <- Apps Script와 동일한 값
 
-    // 간단 유효성 검사
     function validate(form) {
-      const errors = [];
-      const phone = form.phone.value.trim();
-      const phoneOk = /^(01[0-9]|02|0[3-9][0-9])[- ]?\d{3,4}[- ]?\d{4}$/.test(phone) || phone === ""; // 한국 번호 형식(하이픈 옵션)
+      const errorBox = document.getElementById("error-box");
+      errorBox.innerHTML = "";
+      let errors = [];
 
       if (!form.department.value.trim()) errors.push("소속을 입력해 주세요.");
       if (!form.name.value.trim()) errors.push("성명을 입력해 주세요.");
-      if (!phoneOk) errors.push("전화번호 형식을 확인해 주세요. 예) 010-1234-5678");
+      const phone = form.phone.value.trim();
+      const phoneRegex = /^(01[0-9]|02|0[3-9][0-9])[- ]?\d{3,4}[- ]?\d{4}$/;
+      if (!phoneRegex.test(phone)) errors.push("전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)");
 
-      const box = document.getElementById('error-box');
-      box.innerHTML = errors.map(e => `<div>• ${e}</div>`).join("");
-      box.style.display = errors.length ? 'block' : 'none';
-      return errors.length === 0;
+      if (errors.length > 0) {
+        errorBox.style.display = "block";
+        errorBox.innerHTML = errors.map(e => `<div>• ${e}</div>`).join("");
+        return false;
+      } else {
+        errorBox.style.display = "none";
+        return true;
+      }
     }
 
-    function getData(form){
+    function getFormData(form) {
       const getRadio = (name) => {
-        const el = form.querySelector(`input[name="${name}"]:checked`);
-        return el ? el.value : "";
+        const selected = form.querySelector(`input[name="${name}"]:checked`);
+        return selected ? selected.value : "";
       };
       return {
-        department: form.department.value || "",
-        rank: form.rank.value || "",
-        name: form.name.value || "",
-        current_position: form.current_position.value || "",
-        career: form.career.value || "",
-        phone: form.phone.value || "",
+        department: form.department.value.trim(),
+        rank: form.rank.value.trim(),
+        name: form.name.value.trim(),
+        current_position: form.current_position.value.trim(),
+        career: form.career.value.trim(),
+        phone: form.phone.value.trim(),
         qualification: getRadio("qualification"),
         grade: getRadio("grade"),
         hopes: [
-          { order: 1, position: form.pos1.value || "", education: getRadio("edu1") },
-          { order: 2, position: form.pos2.value || "", education: getRadio("edu2") },
-          { order: 3, position: form.pos3.value || "", education: getRadio("edu3") },
-          { order: 4, position: form.pos4.value || "", education: getRadio("edu4") },
-          { order: 5, position: form.pos5.value || "", education: getRadio("edu5") }
+          { position: form.pos1.value.trim(), education: getRadio("edu1") },
+          { position: form.pos2.value.trim(), education: getRadio("edu2") },
+          { position: form.pos3.value.trim(), education: getRadio("edu3") },
+          { position: form.pos4.value.trim(), education: getRadio("edu4") },
+          { position: form.pos5.value.trim(), education: getRadio("edu5") }
         ],
-        submitter: form.submitter.value || ""
+        submitter: form.submitter.value.trim()
       };
     }
 
-    function toHeaderRow(data){
-      const header = [
-        "소속","계급","성명(나이)","현급 배명","경과","전화번호",
-        "보직기준 충족","수사관 자격등급",
-        "1 희망 보직","1 희망 직위 교육이수",
-        "2 희망 보직","2 희망 직위 교육이수",
-        "3 희망 보직","3 희망 직위 교육이수",
-        "4 희망 보직","4 희망 직위 교육이수",
-        "5 희망 보직","5 희망 직위 교육이수",
-        "제출자 성명","제출 시각(ISO)"
-      ];
-      const row = [
-        data.department,
-        data.rank,
-        data.name,
-        data.current_position,
-        data.career,
-        data.phone,
-        data.qualification,
-        data.grade,
+    function toSheetRow(data) {
+      return [
+        data.department, data.rank, data.name, data.current_position, data.career, data.phone,
+        data.qualification, data.grade,
         data.hopes[0].position, data.hopes[0].education,
         data.hopes[1].position, data.hopes[1].education,
         data.hopes[2].position, data.hopes[2].education,
@@ -98,188 +75,76 @@
         data.submitter,
         new Date().toISOString()
       ];
-      return {header,row};
-    }
-
-    function downloadExcel(header,row){
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([header, row]);
-      XLSX.utils.book_append_sheet(wb, ws, "제출내역");
-      const ts = new Date();
-      const pad = (n) => String(n).padStart(2, '0');
-      const fname = `insa_form_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.xlsx`;
-      XLSX.writeFile(wb, fname);
     }
 
     async function saveForm() {
       const form = document.getElementById("insaForm");
-      const btn = document.getElementById("submitBtn");
-      const spin = document.getElementById("spinner");
-
-      // 유효성 검사
       if (!validate(form)) return;
 
-      // 버튼 상태 변경(중복 제출 방지)
-      btn.disabled = true; spin.style.display = 'inline-block'; btn.dataset.originalText = btn.innerText; btn.innerText = '제출 중...';
+      const data = getFormData(form);
+      const header = [
+        "소속", "계급", "성명", "현급 배명", "경과", "전화번호",
+        "보직기준 충족", "자격등급",
+        "1 희망 보직", "1 교육이수",
+        "2 희망 보직", "2 교육이수",
+        "3 희망 보직", "3 교육이수",
+        "4 희망 보직", "4 교육이수",
+        "5 희망 보직", "5 교육이수",
+        "제출자", "제출 시각"
+      ];
+      const row = toSheetRow(data);
 
-      const data = getData(form);
-      const {header, row} = toHeaderRow(data);
-
-      // 1) 구글 시트(Web App) 전송 - CORS 응답 확인, 실패 시 1회 재시도
-      let serverOk = false;
-      if (GAS_URL && GAS_URL.startsWith('http')) {
-        const payload = { header, row, secret: SECRET };
-        try {
-          let res = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
-          if (!res.ok) throw new Error('HTTP '+res.status);
-          // JSON 파싱 시도(옵션)
-          try { await res.json(); } catch(_) {}
-          serverOk = true;
-        } catch (e) {
-          // 1회 재시도(지수백오프 간단 버전)
-          try {
-            await new Promise(r => setTimeout(r, 800));
-            let res2 = await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
-            if (!res2.ok) throw new Error('HTTP '+res2.status);
-            try { await res2.json(); } catch(_) {}
-            serverOk = true;
-          } catch (e2) {
-            console.warn('서버 저장 실패:', e2);
-          }
-        }
+      // 서버 전송
+      let success = false;
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ header, row, secret: SECRET })
+        });
+        const result = await res.json();
+        if (result.status === "ok") success = true;
+      } catch (err) {
+        console.warn("서버 저장 실패", err);
       }
 
-      // 2) 로컬 엑셀 백업(항상 저장 시도)
-      try { downloadExcel(header, row); } catch(e){ console.warn('엑셀 저장 실패', e); }
-
-      // 사용자 알림
-      if (serverOk) {
-        alert('제출되었습니다. (서버 저장 완료 + 로컬 백업)');
-      } else {
-        alert('제출되었습니다. (서버 저장 실패 가능성, 로컬 백업 완료)');
+      // 로컬 엑셀 저장
+      try {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([header, row]);
+        XLSX.utils.book_append_sheet(wb, ws, "제출내역");
+        XLSX.writeFile(wb, `insa_form_${Date.now()}.xlsx`);
+      } catch (err) {
+        console.error("엑셀 저장 실패", err);
       }
 
-      // 버튼 상태 원복
-      btn.disabled = false; spin.style.display = 'none'; btn.innerText = btn.dataset.originalText || '제출하기';
+      alert(success
+        ? "✅ 제출되었습니다. (서버 저장 완료 + 엑셀 저장)"
+        : "⚠️ 서버 저장 실패 (엑셀은 저장됨)");
     }
   </script>
 </head>
 <body>
   <h1>인 사 내 신 서</h1>
-
   <form id="insaForm" onsubmit="return false;">
-    <!-- 첫 번째 기본 정보 표 -->
+    <div id="error-box" class="error"></div>
     <table>
       <tr>
-        <th>소속</th>
-        <td><input type="text" name="department" required></td>
-        <th>계급</th>
-        <td><input type="text" name="rank"></td>
-        <th>성명(나이)</th>
-        <td><input type="text" name="name" required></td>
+        <th>소속</th><td><input type="text" name="department" /></td>
+        <th>계급</th><td><input type="text" name="rank" /></td>
+        <th>성명</th><td><input type="text" name="name" /></td>
       </tr>
       <tr>
-        <th>현급 배명</th>
-        <td><input type="text" name="current_position"></td>
-        <th>경과</th>
-        <td><input type="text" name="career"></td>
-        <th>전화번호</th>
-        <td><input type="tel" name="phone" placeholder="010-1234-5678"></td>
-      </tr>
-    </table>
-    <div id="error-box" class="error" style="display:none;"></div>
-
-    <!-- 두 번째 팀장 기준 표 -->
-    <table>
-      <tr>
-        <th style="width: 30%;">
-          <span class="criteria-title">팀장 보직기준 충족 여부</span><br>
-          <span class="criteria-detail">(최근 10년간 총 수사경력 5년 이상,<br>수사·사이버경력 2년 이상일 것)</span>
-        </th>
-        <td style="width: 20%;">
-          <label><input type="radio" name="qualification" value="O"> O</label>
-          <label><input type="radio" name="qualification" value="X"> X</label>
-        </td>
-        <th style="width: 20%;">수사관 자격등급</th>
-        <td style="width: 30%;">
-          <label><input type="radio" name="grade" value="top5"> 최종상위5%</label>
-          <label><input type="radio" name="grade" value="responsible"> 책임</label>
-          <label><input type="radio" name="grade" value="fulltime"> 전임</label>
-        </td>
+        <th>현급 배명</th><td><input type="text" name="current_position" /></td>
+        <th>경과</th><td><input type="text" name="career" /></td>
+        <th>전화번호</th><td><input type="tel" name="phone" placeholder="010-1234-5678" /></td>
       </tr>
     </table>
 
-    <!-- 세 번째 희망직위 표 (4열 구조, 안내문 포함) -->
-    <table>
-      <tr>
-        <td colspan="4" class="title-cell">희망 직위<br><span class="note" style="font-weight:normal;">
-          □ 희망 직위를 <u>본서 계팀장·지역 관서장 통합</u>하여 1~5 희망을 작성 바랍니다.<br>
-          □ 해당 보직인증 교육 이수증을 같이 제출해 주세요.<br>
-          ※ 본서 일반 팀장 직위는 해당 보직인증 교육 필수 (희망보직의 인증 교육 미이수시 지원불가)
-        </span></td>
-      </tr>
-      <tr>
-        <td></td>
-        <th>희망보직</th>
-        <th>필수</th>
-        <th>희망 직위<br>보직인증 교육 이수여부</th>
-      </tr>
-      <tr>
-        <td>1 희망</td>
-        <td><input type="text" name="pos1"></td>
-        <td>1 희망 직위<br>교육 이수</td>
-        <td>
-          <label><input type="radio" name="edu1" value="이수"> 이수</label>
-          <label><input type="radio" name="edu1" value="미이수"> 미이수</label>
-        </td>
-      </tr>
-      <tr>
-        <td>2 희망</td>
-        <td><input type="text" name="pos2"></td>
-        <td>2 희망 직위<br>교육 이수</td>
-        <td>
-          <label><input type="radio" name="edu2" value="이수"> 이수</label>
-          <label><input type="radio" name="edu2" value="미이수"> 미이수</label>
-        </td>
-      </tr>
-      <tr>
-        <td>3 희망</td>
-        <td><input type="text" name="pos3"></td>
-        <td>3 희망 직위<br>교육 이수</td>
-        <td>
-          <label><input type="radio" name="edu3" value="이수"> 이수</label>
-          <label><input type="radio" name="edu3" value="미이수"> 미이수</label>
-        </td>
-      </tr>
-      <tr>
-        <td>4 희망</td>
-        <td><input type="text" name="pos4"></td>
-        <td>4 희망 직위<br>교육 이수</td>
-        <td>
-          <label><input type="radio" name="edu4" value="이수"> 이수</label>
-          <label><input type="radio" name="edu4" value="미이수"> 미이수</label>
-        </td>
-      </tr>
-      <tr>
-        <td>5 희망</td>
-        <td><input type="text" name="pos5"></td>
-        <td>5 희망 직위<br>교육 이수</td>
-        <td>
-          <label><input type="radio" name="edu5" value="이수"> 이수</label>
-          <label><input type="radio" name="edu5" value="미이수"> 미이수</label>
-        </td>
-      </tr>
-    </table>
-
-    <p class="helper">* 필수: 소속, 성명, 전화번호(형식)</p>
-
-    <p style="margin-top:20px; text-align:right; font-size:16px;">제출자 성명 <input type="text" name="submitter" style="width:200px; font-size:15px;"> (인)</p>
-
-    <button id="submitBtn" type="button" class="submit-btn" onclick="saveForm()">
-      <span id="spinner" class="spinner"></span>
-      제출하기
-    </button>
+    <p style="text-align:right; font-size:16px;">제출자 성명 <input type="text" name="submitter" style="width:200px;"> (인)</p>
+    <button type="button" class="submit-btn" onclick="saveForm()">제출하기</button>
   </form>
 </body>
 </html>
+
 
