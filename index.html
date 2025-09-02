@@ -20,10 +20,10 @@
   <!-- SheetJS (XLSX) CDN for Excel export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-    // ★ 중앙 엑셀(구글 시트)에 누적 저장용 Apps Script Web App URL
-    // 아래 URL을 본인 프로젝트의 배포된 웹앱 URL로 교체하세요.
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzxg6TAILqYdludj5BmiPv_irlNZOkcxZ66NpvJdazROgKS1K6qc4tI18KjWV_cxxU2/exec"; // 예: https://script.google.com/macros/s/AKfycbx.../exec
-    const SECRET = 'MY_SECRET_123';
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbz2DOLIkOcyEiV_Pv_UgrZFZVH4uv0iH9_HMtYTyqqItinzlG5ZIIiIfKnzpFjXR0Cd/exec";
+  const SECRET = "MY_SECRET_123"; // GAS 코드와 반드시 일치해야 저장됨
+</script>
+
     async function saveForm() {
       const form = document.getElementById("insaForm");
 
@@ -227,4 +227,5 @@
 </body>
 </html>
 ```
+
 
