@@ -32,13 +32,18 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-    // === 서버 설정 (주신 값 반영) ===
+    // === 서버 설정 ===
     const GAS_URL = "https://script.google.com/macros/s/AKfycbypah7edDgsgpFqbg9GvKpSwoZFzB2aQ8sV9HVaXr59De42r5X5Hd5COxYJVa-gKzMG/exec";
-    const SECRET  = "MY_SECRET_123"; // 서버와 반드시 동일
+    const SECRET  = "MY_SECRET_123"; // 서버와 동일
 
     document.addEventListener('DOMContentLoaded', () => {
       if (location.protocol === 'file:') {
-        document.getElementById('file-banner').style.display = 'block';
+        const banner = document.createElement('div');
+        banner.className = 'banner';
+        banner.id = 'file-banner';
+        banner.innerHTML = '⚠️ 현재 파일을 <b>file://</b>로 열었습니다. 가능하면 GitHub Pages/Netlify 등 <b>https</b> 환경에서 실행하세요.';
+        document.body.prepend(banner);
+        banner.style.display = 'block';
       }
     });
 
@@ -120,7 +125,7 @@
       const ws = XLSX.utils.aoa_to_sheet([header, row]);
       XLSX.utils.book_append_sheet(wb, ws, "제출내역");
       const ts = new Date();
-      const pad = n => String(n).padStart(2,"0");
+      const pad = n => String(n).padStart(2, "0");
       const fname = `insa_form_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.xlsx`;
       XLSX.writeFile(wb, fname);
     }
@@ -128,7 +133,7 @@
     async function saveForm() {
       const form = document.getElementById("insaForm");
       const resultBox = document.getElementById("result");
-      const debugBox = document.getElementById("debug");
+      const debugBox  = document.getElementById("debug");
       resultBox.style.display = "none"; debugBox.textContent = "";
 
       if (!validate(form)) return;
@@ -143,13 +148,13 @@
         const to = setTimeout(() => controller.abort(), 10000);
         const res = await fetch(GAS_URL, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain" },   // ★ 프리플라이트 방지
           body: JSON.stringify({ header, row, secret: SECRET }),
           signal: controller.signal
         });
         clearTimeout(to);
         httpStatus = res.status;
-        gasJson = await res.json().catch(() => null); // GAS는 JSON을 반환해야 함
+        gasJson = await res.json().catch(() => null);  // GAS는 JSON({status:"ok"}) 반환 필요
         serverOk = res.ok && gasJson && gasJson.status === "ok";
       } catch (err) {
         httpStatus = String(err);
@@ -177,11 +182,6 @@
 </head>
 <body>
   <h1>인 사 내 신 서</h1>
-
-  <div id="file-banner" class="banner">
-    ⚠️ 현재 파일을 <b>file://</b>로 열었습니다. Google Apps Script 호출이 브라우저 정책으로 차단될 수 있어요.
-    가능하면 GitHub Pages/Netlify 등 <b>https</b> 환경에서 실행하세요.
-  </div>
 
   <form id="insaForm" onsubmit="return false;">
     <div id="error-box" class="error"></div>
@@ -304,5 +304,6 @@
   </form>
 </body>
 </html>
+
 
 
