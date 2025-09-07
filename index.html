@@ -27,11 +27,12 @@
     .debug { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; }
   </style>
 
+  <!-- 엑셀 저장용 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-    // === 서버 설정 ===
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzpzN20qm1pKqaakMULp1Ut2JOGIUXdoDw8SmkOR9qsjPNJhvjC1ch2I_pvp6qlKr5T/exec";
+    // === 서버 설정 (주신 URL/시크릿 반영) ===
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzSustDlSreVRnxn4G2hryxBfpFZvb6YO9Xv_23VsxO0iUfW8NEAlOI4YMebi0g8OnA/exec";
     const SECRET  = "MY_SECRET_123";
 
     function validate(form) {
@@ -128,7 +129,6 @@
       const data = collectData(form);
       const { header, row } = toHeaderAndRow(data);
 
-      // 단순요청으로 전송: x-www-form-urlencoded + payload=JSON
       const body = 'payload=' + encodeURIComponent(JSON.stringify({ header, row, secret: SECRET }));
 
       let serverOk = false, httpStatus = null, gasJson = null;
@@ -296,5 +296,4 @@
   </form>
 </body>
 </html>
-
 
