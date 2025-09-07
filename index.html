@@ -25,27 +25,15 @@
     .result.ok { border-color:#c8e6c9; background:#f1fff1; }
     .result.err { border-color:#ffcdd2; background:#fff5f5; }
     .debug { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; }
-    .banner { background:#fff8e1; border:1px solid #ffe082; color:#795548; padding:10px 12px; border-radius:8px; margin-bottom:16px; display:none; }
   </style>
 
   <!-- SheetJS (XLSX) for Excel export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-    // === 서버 설정 ===
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbypah7edDgsgpFqbg9GvKpSwoZFzB2aQ8sV9HVaXr59De42r5X5Hd5COxYJVa-gKzMG/exec";
-    const SECRET  = "MY_SECRET_123"; // 서버와 동일
-
-    document.addEventListener('DOMContentLoaded', () => {
-      if (location.protocol === 'file:') {
-        const banner = document.createElement('div');
-        banner.className = 'banner';
-        banner.id = 'file-banner';
-        banner.innerHTML = '⚠️ 현재 파일을 <b>file://</b>로 열었습니다. 가능하면 GitHub Pages/Netlify 등 <b>https</b> 환경에서 실행하세요.';
-        document.body.prepend(banner);
-        banner.style.display = 'block';
-      }
-    });
+    // === 서버 설정 (버전2 웹앱 URL 반영) ===
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzpzN20qm1pKqaakMULp1Ut2JOGIUXdoDw8SmkOR9qsjPNJhvjC1ch2I_pvp6qlKr5T/exec";
+    const SECRET  = "MY_SECRET_123"; // 서버와 동일해야 함
 
     function validate(form) {
       const errors = [];
@@ -141,34 +129,40 @@
       const data = collectData(form);
       const { header, row } = toHeaderAndRow(data);
 
-      let serverOk = false, httpStatus = null, gasJson = null;
+      // === 프리플라이트 회피: x-www-form-urlencoded + payload=JSON 문자열 ===
+      const payload = 'payload=' + encodeURIComponent(JSON.stringify({ header, row, secret: SECRET }));
 
+      let serverOk = false, httpStatus = null, gasJson = null;
       try {
         const controller = new AbortController();
-        const to = setTimeout(() => controller.abort(), 10000);
+        const to = setTimeout(() => controller.abort(), 15000);
+
         const res = await fetch(GAS_URL, {
           method: "POST",
-          headers: { "Content-Type": "text/plain" },   // ★ 프리플라이트 방지
-          body: JSON.stringify({ header, row, secret: SECRET }),
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: payload,
           signal: controller.signal
         });
         clearTimeout(to);
+
         httpStatus = res.status;
-        gasJson = await res.json().catch(() => null);  // GAS는 JSON({status:"ok"}) 반환 필요
+        gasJson = await res.json().catch(() => null);  // GAS는 {status:"ok"} 형태 JSON 반환 권장
         serverOk = res.ok && gasJson && gasJson.status === "ok";
       } catch (err) {
         httpStatus = String(err);
       }
 
-      try { downloadExcel(header, row); } catch (e) { console.warn("엑셀 저장 실패:", e); }
+      // 로컬 엑셀 백업(항상 시도)
+      try { downloadExcel(header, row); } catch (e) {}
 
+      // 결과 표시
       resultBox.style.display = "block";
       if (serverOk) {
         resultBox.className = "result ok";
         resultBox.textContent = "✅ 제출되었습니다. (서버 저장 완료 + 로컬 백업)";
       } else {
         resultBox.className = "result err";
-        resultBox.textContent = "⚠️ 서버 저장 실패 가능성 (로컬 백업은 저장됨). 서버 권한/SECRET/배포 상태를 확인하세요.";
+        resultBox.textContent = "⚠️ 서버 저장 실패 가능성 (로컬 백업은 저장됨). 배포/권한/시트/SECRET을 확인하세요.";
       }
 
       debugBox.textContent =
@@ -304,6 +298,5 @@
   </form>
 </body>
 </html>
-
 
 
