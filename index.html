@@ -24,16 +24,15 @@
     .result { margin-top:12px; font-size:14px; display:none; padding:10px 12px; border-radius:8px; border:1px solid #e0e0e0; background:#fafafa; }
     .result.ok { border-color:#c8e6c9; background:#f1fff1; }
     .result.err { border-color:#ffcdd2; background:#fff5f5; }
-    .debug { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; }
+    .debug { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; white-space:pre-wrap; }
   </style>
 
-  <!-- SheetJS (XLSX) for Excel export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <script>
-    // === 서버 설정 (버전2 웹앱 URL 반영) ===
+    // === 서버 설정 ===
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzpzN20qm1pKqaakMULp1Ut2JOGIUXdoDw8SmkOR9qsjPNJhvjC1ch2I_pvp6qlKr5T/exec";
-    const SECRET  = "MY_SECRET_123"; // 서버와 동일해야 함
+    const SECRET  = "MY_SECRET_123";
 
     function validate(form) {
       const errors = [];
@@ -86,14 +85,14 @@
 
     function toHeaderAndRow(data) {
       const header = [
-        "소속", "계급", "성명(나이)", "현급 배명", "경과", "전화번호",
-        "보직기준 충족", "수사관 자격등급",
-        "1 희망 보직", "1 희망 직위 교육이수",
-        "2 희망 보직", "2 희망 직위 교육이수",
-        "3 희망 보직", "3 희망 직위 교육이수",
-        "4 희망 보직", "4 희망 직위 교육이수",
-        "5 희망 보직", "5 희망 직위 교육이수",
-        "제출자 성명", "제출 시각(ISO)"
+        "소속","계급","성명(나이)","현급 배명","경과","전화번호",
+        "보직기준 충족","수사관 자격등급",
+        "1 희망 보직","1 희망 직위 교육이수",
+        "2 희망 보직","2 희망 직위 교육이수",
+        "3 희망 보직","3 희망 직위 교육이수",
+        "4 희망 보직","4 희망 직위 교육이수",
+        "5 희망 보직","5 희망 직위 교육이수",
+        "제출자 성명","제출 시각(ISO)"
       ];
       const row = [
         data.department, data.rank, data.name, data.current_position, data.career, data.phone,
@@ -129,10 +128,11 @@
       const data = collectData(form);
       const { header, row } = toHeaderAndRow(data);
 
-      // === 프리플라이트 회피: x-www-form-urlencoded + payload=JSON 문자열 ===
-      const payload = 'payload=' + encodeURIComponent(JSON.stringify({ header, row, secret: SECRET }));
+      // 단순요청으로 전송: x-www-form-urlencoded + payload=JSON
+      const body = 'payload=' + encodeURIComponent(JSON.stringify({ header, row, secret: SECRET }));
 
       let serverOk = false, httpStatus = null, gasJson = null;
+
       try {
         const controller = new AbortController();
         const to = setTimeout(() => controller.abort(), 15000);
@@ -140,22 +140,20 @@
         const res = await fetch(GAS_URL, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: payload,
+          body,
           signal: controller.signal
         });
         clearTimeout(to);
 
         httpStatus = res.status;
-        gasJson = await res.json().catch(() => null);  // GAS는 {status:"ok"} 형태 JSON 반환 권장
+        gasJson = await res.json().catch(() => null);
         serverOk = res.ok && gasJson && gasJson.status === "ok";
       } catch (err) {
         httpStatus = String(err);
       }
 
-      // 로컬 엑셀 백업(항상 시도)
       try { downloadExcel(header, row); } catch (e) {}
 
-      // 결과 표시
       resultBox.style.display = "block";
       if (serverOk) {
         resultBox.className = "result ok";
